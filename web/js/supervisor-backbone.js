@@ -38,19 +38,19 @@
 			this.cid = this.get("name");
 		},
 
-		addOne: function(service) { console.log("Adding one server -#41");
+		addOne: function(service) {
 			var view = new SupervisorServiceView({model: service});
 			$("#" + service.collection.server.get("id") + "_services").append(view.render().el);
 		},
 
-		addAll: function() {console.log('Adding all services #46');
+		addAll: function() {
 			this.set("totalServices", 0);
 			this.set("runningServices", 0);
 			this.services.each(this.addOne);
 			this.countServices();
 		},
 
-		countServices: function() {console.log('Counting services #53');
+		countServices: function() {
 			this.set("totalServices", 0);
 			this.set("runningServices", 0);
 			this.services.each(function(service) {
@@ -229,9 +229,7 @@
 			SupervisorServers.bind('add', this.addOne, this);
 			SupervisorServers.bind('reset', this.addAll, this);
 			SupervisorServers.bind('all', this.render, this);
-			console.log('appview_initialize #229');
 			SupervisorServers.fetch();
-			console.log('appview_initialize #231');
 		},
 
 		addOne: function(server) {console.log('appending server');
@@ -241,20 +239,22 @@
 		},
 
 		addAll: function() {console.log('adding all servers');
-			console.log(SupervisorServers);
-			SupervisorServers.each(console.log);
 			SupervisorServers.each(this.addOne);
 		}
 
 	});
-
 	var updateServers = function() {console.log('updating servers');
-		SupervisorServers.fetch();
-		setTimeout(updateServers, 1000);
+		//~ SupervisorServers.fetch();
+		SupervisorServers.each(function(server) {
+		  server.services.each(function(service) {
+		    service.fetch();
+		  });
+		});
+		setTimeout(updateServers, 30*1000);
 	}
 
 	var App = new AppView;
-
-	//updateServers();
+	//~ setTimeout(updateServers, 5*1000);
+	//~ updateServers();
 
 });
