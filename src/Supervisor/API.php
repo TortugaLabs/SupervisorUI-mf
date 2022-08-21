@@ -31,11 +31,16 @@ class API {
 
 	}
 
+	static public function serverUrl($server,$port=9001,$path='/RPC2/',$proto='http') {
+	  if (!preg_match('/:\d+$/',$server)) $server = $server . ':' . $port;
+	  return $proto . '://'. $server . $path;
+	}
+
 	public function __call($action, $arguments) {
 		@list($server, $option) = $arguments;
 
 		if ($action == 'multicall') {
-			$client = new \IXR_ClientMulticall("http://$server:9001/RPC2/");
+			$client = new \IXR_ClientMulticall(self::serverUrl($server));
 			$client->debug = true;
 			foreach ((array)$option as $method) {
 				$client->addCall($this->getNamespace($server, $action).'.'.$method);
@@ -51,12 +56,13 @@ class API {
 			$args = array(
 				$this->getNamespace($server, $action).'.'.$action,
 			);
+			//~ var_dump($args);
 
 			if ($option) {
 				$args[] = $option;
 			}
 
-			$client = new \IXR_Client("http://$server:9001/RPC2/");
+			$client = new \IXR_Client(self::serverUrl($server));
 			//$client->debug = true;
 			if (!call_user_func_array(array($client, 'query'), $args)) {
 				return array('error' => array(
@@ -71,8 +77,9 @@ class API {
 
 	private function getNamespace($server, $check_method) {
 		if (empty($this->methods)) {
-			$client = new \IXR_Client("http://$server:9001/RPC2/");
-		//	$client->debug = true;
+			//~ echo(__FILE__.','.__LINE__.': '.__FUNCTION__.PHP_EOL);
+			$client = new \IXR_Client(self::serverUrl($server));
+			//~ $client->debug = true;
 			if (!$client->query('system.listMethods')) {
 				return false;
 			} else {
@@ -83,6 +90,7 @@ class API {
 					$this->methods[$parts[1]] = $parts[0];
 				}
 			}
+			//~ print_r($this->methods);
 		}
 
 		return $this->methods[$check_method];
