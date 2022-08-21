@@ -47,6 +47,7 @@ Restart apache and supervisord for these changes to take effect
 
 ## Screenshot
 
+![screenshot](https://github.com/TortugaLabs/SupervisorUI-mf/raw/master/screenshot.png)
 
 
 ## Authors
