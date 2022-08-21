@@ -8,7 +8,7 @@
 	// server model
 	var SupervisorServer = Backbone.Model.extend({
 		url: function() {
-			return 'http://'+this.get("ip") + URL_ROOT + 'server/details/' + this.get("id");
+			return API_ROOT + 'server/details/' + this.get("id") + "/" + encodeURIComponent(this.get("ip"));
 		},
 
 		el: $("#servers"),
@@ -38,19 +38,19 @@
 			this.cid = this.get("name");
 		},
 
-		addOne: function(service) {
+		addOne: function(service) { console.log("Adding one server -#41");
 			var view = new SupervisorServiceView({model: service});
 			$("#" + service.collection.server.get("id") + "_services").append(view.render().el);
 		},
 
-		addAll: function() {console.log('Adding all services');
+		addAll: function() {console.log('Adding all services #46');
 			this.set("totalServices", 0);
 			this.set("runningServices", 0);
 			this.services.each(this.addOne);
 			this.countServices();
 		},
 
-		countServices: function() {
+		countServices: function() {console.log('Counting services #53');
 			this.set("totalServices", 0);
 			this.set("runningServices", 0);
 			this.services.each(function(service) {
@@ -66,7 +66,7 @@
 	var SupervisorServerList = Backbone.Collection.extend({
 		model: SupervisorServer,
 		url: function() {
-			return URL_ROOT + 'server/list.json'
+			return API_ROOT + 'server/list.json'
 		}
 	});
 
@@ -125,8 +125,11 @@
 		syncError: "",
 
 		url: function() {
-			return 'http://'+this.collection.server.get("ip") + URL_ROOT + 'service/' +  this.collection.server.get("id") + "/"
+			return API_ROOT  + 'service/' +  this.collection.server.get("id") + '/'
+				+ encodeURIComponent(this.collection.server.get("ip")) + '/'
 				+ ((this.get('group') !=  this.get("name")) ? this.get('group') + ":" : "") + this.get("name");
+			//~ return 'http://'+this.collection.server.get("ip") + URL_ROOT + 'service/' +  this.collection.server.get("id") + "/"
+				//~ + ((this.get('group') !=  this.get("name")) ? this.get('group') + ":" : "") + this.get("name");
 		},
 
 		initialize: function() {
@@ -176,7 +179,7 @@
 		model: SupervisorService,
 
 		url: function() {
-			return 'http://'+this.server.get("ip") + URL_ROOT + 'service/' + this.server.get("id");
+			return API_ROOT + 'service/' + this.server.get("id") + '/' + encodeURIComponent(this.server.get("ip"));
 		},
 
 		server: {}
@@ -226,7 +229,9 @@
 			SupervisorServers.bind('add', this.addOne, this);
 			SupervisorServers.bind('reset', this.addAll, this);
 			SupervisorServers.bind('all', this.render, this);
+			console.log('appview_initialize #229');
 			SupervisorServers.fetch();
+			console.log('appview_initialize #231');
 		},
 
 		addOne: function(server) {console.log('appending server');
@@ -235,13 +240,15 @@
 			this.$("#server-list").append(view.render().el);
 		},
 
-		addAll: function() {
+		addAll: function() {console.log('adding all servers');
+			console.log(SupervisorServers);
+			SupervisorServers.each(console.log);
 			SupervisorServers.each(this.addOne);
 		}
 
 	});
 
-	var updateServers = function() {
+	var updateServers = function() {console.log('updating servers');
 		SupervisorServers.fetch();
 		setTimeout(updateServers, 1000);
 	}

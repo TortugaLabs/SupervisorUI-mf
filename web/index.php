@@ -1,77 +1,158 @@
 <?php
-/**
- * @copyright (c) 2012, Luxbet Pty Ltd. All rights reserved.
- * @license http://www.opensource.org/licenses/BSD-3-Clause
- */
+require_once(__DIR__.'/../src/Supervisor/IXR_Library.php');
+require_once(__DIR__.'/../src/Supervisor/API.php');
 
-require_once __DIR__ . '/../silex.phar';
+$api_root = $_SERVER['SCRIPT_NAME'].'/';
+$url_root = dirname($_SERVER['SCRIPT_NAME']);
+if ($url_root != '/') $url_root .= '/';
 
-use Symfony\Component\ClassLoader\UniversalClassLoader,
-	Symfony\Component\HttpFoundation\Request,
-	Symfony\Component\HttpFoundation\Response;
+$servers = require(__DIR__.'/../config.php');
 
-$loader = new UniversalClassLoader();
-
-$loader->registerNamespace('Supervisor', __DIR__.'/../src');
-$loader->register();
-
-$app = new Silex\Application();
-
-$debug = false;
-$app['debug'] = $debug;
-
-$app->register(new Silex\Provider\UrlGeneratorServiceProvider());
-$app->mount('/service', new Supervisor\ServiceControllerProvider());
-$app->mount('/server', new Supervisor\ServerControllerProvider());
-
-$app->get('/', function () use ($app) {
-    return $app->redirect($app['url_generator']->generate('server_list'));
-})->bind('home');
-
-// CORS will send an OPTIONS request. Make sure we send back what the browser is expecting to allow the CORS request to work.
-$app->before(function(Request $request) {
-	if ($request->getMethod() == 'OPTIONS') {
-		header('Access-Control-Allow-Origin: *');
-		header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-		header('Access-Control-Max-Age: 1728000');
-		header('Access-Control-Allow-Headers: content-type, origin, accept');
-		header('Content-Length: 0');
-		header('Content-Type: text/plain');
-		exit;
-		// Would prefer to do this:
-		/*return new Response('', 201, array(
-			'Access-Control-Allow-Origin: *',
-			'Access-Control-Allow-Methods: GET, POST, OPTIONS',
-			'Access-Control-Allow-Headers: content-type, origin, accept',
-			'Access-Control-Max-Age: 1728000',
-			'Content-Length: 0',
-			'Content-Type: text/plain',
-		));*/
-	}
-});
-
-$app->after(function(Request $request, Response $response) {
-	// Add *some* support for JSONP, but we can't toggle services as we have no POST support
-	if ($request->getMethod() === 'GET' && $request->get('callback') !== null) {
-		$response->setContent($request->get('callback') . '(' . $response->getContent() .')');
-	} else {
-		// Let our CORS requests work with this app
-		$response->headers->set('Access-Control-Allow-Origin', '*');
-	}
-});
-
-if (!$debug) {
-	$app->error(function (\Exception $e, $code) {
-		switch ($code) {
-			case 404:
-				$message = 'The requested page could not be found.';
-				break;
-			default:
-				$message = 'We are sorry, but something went terribly wrong.';
-		}
-
-		return new Response($message, $code);
-	});
+function check_server($addr) {
+  global $servers;
+  foreach ($servers as $n) {
+    if ($n['ip'] == $addr) return $n;
+  }
+  return null;
 }
 
-$app->run();
+function dispatcher($route) {
+  global $servers;
+
+  Header('Content-type: text/plain');
+  if ($route == '/server/list.json') {
+    foreach (array_keys($servers) as $server_id) {
+      $servers[$server_id]['id'] = $server_id;
+    }
+    echo json_encode($servers);
+    return;
+  }
+  if (preg_match('/\/server\/details\/(\d+)\/(.*)$/',$route,$mv)) {
+    list(,$id,$addr) = $mv;
+    $n = check_server($addr);
+    if (is_null($n)) return 'Unknown server '.$addr;
+    $name = $n['name'];
+
+    $api = new \Supervisor\API;
+    $details = array_merge([
+	'version' => $api->getSupervisorVersion($addr).' (API:'.$api->getAPIVersion($addr).')',
+	'pid' => $api->getPID($addr),
+      ],
+      $api->getState($addr),
+      [
+	'name' => $name,
+	'ip' => $addr,
+      ]);
+    echo json_encode($details);
+    return;
+  }
+  if (preg_match('/\/service\/(\d+)\/([^\/]+)$/',$route,$mv)) {
+    list(,$id,$addr) = $mv;
+    $n = check_server($addr);
+    if (is_null($n)) return 'Unknown server '.$addr;
+
+    $api = new \Supervisor\API;
+    $services = $api->getAllProcessInfo($addr);
+    echo json_encode($services);
+    return;
+  }
+  if (preg_match('/\/service\/(\d+)\/([^\/]+)\/([^\/]+)$/',$route,$mv)) {
+    list(,$id,$addr,$service) = $mv;
+    $n = check_server($addr);
+    if (is_null($n)) return 'Unknown server '.$addr;
+
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') == 'POST') {
+      $req = json_decode(file_get_contents('php://input'), true);
+      if (!$req) return 'Unable to decode JSON';
+
+      $res = false;
+
+      $api = new \Supervisor\API;
+      $cstate = $api->getProcessInfo($addr,$service);
+      if (isset($cstate['error'])) {
+	$res = $cstate;
+      } else {
+	if (isset($req['running'])) {
+	  if (!$req['running'] && $cstate['state'] == $api::STATE_RUNNING) {
+	    $res = $api->stopProcess($addr,$service);
+	  } elseif ($req['running'] && $cstate['state'] != $api::STATE_RUNNING)  {
+	    $res = $api->startProcess($addr,$service);
+	  }
+	}
+	if (!$res) {
+	  $res = ['error'=>['code'=>'','msg'=>'Error state for '.$service]];
+	}
+      }
+      echo json_encode($res);
+      return;
+    } else {
+      $api = new \Supervisor\API;
+      $res = $api->getProcessInfo($addr,$service);
+      echo json_encode($res);
+      return;
+    }
+  }
+  return 'Not implemented';
+}
+
+if (empty($_SERVER['PATH_INFO'])) {
+  include(__DIR__.'/../views/supervisorui.html');
+} else {
+  $res = dispatcher($_SERVER['PATH_INFO']);
+  if ($res) {
+    http_response_code(500);
+    echo $res;
+  }
+}
+
+
+
+//~ $id_cnt = 0;
+//~ function idgen(): int {
+  //~ global $id_cnt;
+  //~ return ++$id_cnt;
+//~ }
+
+//~ function run_cmds() {
+  //~ if (!isset($_GET['cmd'])) return;
+  //~ switch ($_GET['cmd']) {
+  //~ case 'stopstart':
+    //~ if (!(isset($_GET['mode']) && isset($_GET['ip']) && isset($_GET['name']))) return 'Missing arguments for stopstart command';
+    //~ list($mode,$ip,$name) = [$_GET['mode'],$_GET['ip'],$_GET['name']];
+
+    //~ $api = new \Supervisor\API;
+    //~ if ($mode) { // Is running...
+      //~ $res = $api->stopProcess($ip,$name);
+      //~ return $res ? ('Succesfully stopped '.$name.' on '.$ip) :
+		    //~ ('Error stoping '.$name.' on '.$ip);
+    //~ } else {
+      //~ $res = $api->startProcess($ip,$name);
+      //~ return $res ? ('Succesfully started '.$name.' on '.$ip) :
+		    //~ ('Error starting '.$name.' on '.$ip);
+    //~ }
+    //~ break;
+  //~ default:
+    //~ return 'Unknown command: '.$_GET['cmd'];
+  //~ }
+//~ }
+
+
+//~ $msg = run_cmds();
+
+//~ $status = [];
+//~ foreach ($servs as $name => $ip) {
+  //~ $api = new \Supervisor\API;
+  //~ $status[$name] = [
+    //~ 'ip' => $ip,
+    //~ 'supervisor' => $api->getIdentification($ip)
+		//~ .' '.$api->getSupervisorVersion($ip)
+		//~ .' (API:'.$api->getAPIVersion($ip).')',
+    //~ 'pid' => $api->getPID($ip),
+    //~ 'services' => $api->getAllProcessInfo($ip),
+  //~ ];
+  //~ foreach ($status[$name]['services'] as &$srv) {
+    //~ $srv['running'] = $srv['state'] == $api::STATE_RUNNING;
+  //~ }
+//~ }
+
+

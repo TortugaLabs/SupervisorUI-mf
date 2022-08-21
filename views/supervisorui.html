@@ -9,9 +9,10 @@
     <head>
         <meta charset="UTF-8" />
         <title>Supervisor Servers</title>
-		<link href="<?=$url_root?>css/bootstrap.css" media="screen" rel="stylesheet" type="text/css" />
-		<link href="<?=$url_root?>css/bootstrap-responsive.css" media="screen" rel="stylesheet" type="text/css" />
-		<style type="text/css">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link href="<?=$url_root?>css/bootstrap.css" media="screen" rel="stylesheet" type="text/css" />
+	<link href="<?=$url_root?>css/bootstrap-responsive.css" media="screen" rel="stylesheet" type="text/css" />
+	<style type="text/css">
 			body {
 				padding-top: 60px;
 				padding-bottom: 40px;
@@ -71,10 +72,20 @@
 			#servers {
 				padding-bottom: 80px;
 			}
-		  </style>
+	</style>
+	<script>
+		var URL_ROOT = <?=escapeshellarg($url_root) ?>;
+		var API_ROOT = <?= escapeshellarg($api_root) ?>;
+	</script>
+	<script src="<?=$url_root?>js/jquery.js"></script>
+	<script src="<?=$url_root?>js/bootstrap.js"></script>
+	<script src="<?=$url_root?>js/bootstrap-alert.js"></script>
+	<script src="<?=$url_root?>js/underscore.js"></script>
+	<script src="<?=$url_root?>js/backbone.js"></script>
+	<script src="<?=$url_root?>js/supervisor-backbone.js"></script>
     </head>
     <body>
-		<div class="navbar navbar-fixed-top">
+	    <div class="navbar navbar-fixed-top">
 	      <div class="navbar-inner">
 	        <div class="container-fluid">
 	          <a class="brand" href="#">Supervisor Dashboard</a>
@@ -90,19 +101,14 @@
 		</div>
 
 		<div class="modal-footer fixed-footer">
-			<footer><a href="https://github.com/luxbet" target="_blank">Luxbet</a></footer>
+			<footer>
+			  <a href="https://github.com/TortugaLabs/SupervisorUI-mf/" target="_blank">
+			    <img src="<?= $url_root ?>/img/github.png">
+			  </a>
+			</footer>
 		</div>
 
-		<script>
-			var URL_ROOT = "<?=$url_root?>";
-		</script>
 
-		<script src="<?=$url_root?>js/jquery.js"></script>
-		<script src="<?=$url_root?>js/bootstrap.js"></script>
-		<script src="<?=$url_root?>js/bootstrap-alert.js"></script>
-		<script src="<?=$url_root?>js/underscore.js"></script>
-		<script src="<?=$url_root?>js/backbone.js"></script>
-		<script src="<?=$url_root?>js/supervisor-backbone.js"></script>
 
 		<script type="text/template" id="server-template">
 			<div class="server-summary page-header">
