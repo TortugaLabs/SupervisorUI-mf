@@ -66,6 +66,37 @@ Released under [The BSD 3 clause License](http://www.opensource.org/licenses/BSD
 # Changes
 
 - 2022.08:
+  - Make it so that it updates automatically
   - Removed dependancy on the [Silex](http://silex.sensiolabs.org/) phar archive.
   - updated to PHP8
   - make it possible to specify port numbers
+  - added links to supervisor's built-in UI, and actions to reload
+    and restart supervisor.
+
+# Backlog
+
+- tweak the server display
+- implement sendsignal
+
+# Issues
+
+- I am not able to call API functions that have complext parameters.
+- [supervisord API](http://supervisord.org/api.html#process-control)
+- send signal:
+  - USR1, graceful restart (apache)
+  - HUP, restart now (apache)
+  - signalProcess(name, signal)
+    - Send an arbitrary UNIX signal to the process named by name
+    - @param string name Name of the process to signal (or ‘group:name’)
+    - @param string signal Signal to send, as name (‘HUP’) or number (‘1’)
+    - @return boolean
+
+
+```html
+<button type="button" class="sigusr1 btn btn-mini btn-warning" title="Send USR1 signal">
+ <i class="icon-white icon-exclamation-sign"></i>
+</button>
+<button type="button" class="sighup btn btn-mini btn-warning" title="Send HUP signal">
+ <i class="icon-white icon-repeat"></i>
+</button>
+```

@@ -8,7 +8,7 @@ return array(
 		'name' => 'server1',
 	),
 	array(
-		'ip' => '192.168.1.2',
+		'ip' => '192.168.1.2:9002',
 		'name' => 'server2',
 	),
 );

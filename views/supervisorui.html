@@ -8,7 +8,7 @@
 <html lang="en">
     <head>
         <meta charset="UTF-8" />
-        <title>Supervisor Servers</title>
+        <title>SupervisorUI-mf Servers</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link href="<?=$url_root?>css/bootstrap.css" media="screen" rel="stylesheet" type="text/css" />
 	<link href="<?=$url_root?>css/bootstrap-responsive.css" media="screen" rel="stylesheet" type="text/css" />
@@ -88,7 +88,7 @@
 	    <div class="navbar navbar-fixed-top">
 	      <div class="navbar-inner">
 	        <div class="container-fluid">
-	          <a class="brand" href="#">Supervisor Dashboard</a>
+	          <a class="brand" href="#">SupervisorUI-mf Dashboard</a>
 	        </div>
 	      </div>
 	    </div>
@@ -111,6 +111,9 @@
 
 
 		<script type="text/template" id="server-template">
+			<a href="http://<%= ip %>/" target="_blank">status</a> :
+			<a href="<?= $api_root ?>server/reload/<%= id %>/<%= ip %>">reload</a> :
+			<a href="<?= $api_root ?>server/restart/<%= id %>/<%= ip %>">restart</a>
 			<div class="server-summary page-header">
 				<h3><i class="icon-plus-sign"></i>
 					<%= name %>
@@ -131,7 +134,7 @@
 
 		<script type="text/template" id="service-template">
 				<span style="float:right;">
-					<button type="button" class="running_action btn btn-mini <%= running ? 'btn-danger' : 'btn-info' %>" value="<%= running %>"><i class="icon-white <%= running ? 'icon-stop' : 'icon-play' %>"></i></button>
+					<button type="button" class="running_action btn btn-mini <%= running ? 'btn-danger' : 'btn-info' %>" value="<%= running %>" title="<%= running ? 'Stop' : 'Start' %>"><i class="icon-white <%= running ? 'icon-stop' : 'icon-play' %>"></i></button>
 				</span>
 				<span class="status label <%= running ? 'label-success' : 'label-important' %>">
 					<%= statename %>

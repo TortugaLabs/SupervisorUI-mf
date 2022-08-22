@@ -29,7 +29,7 @@
 		},
 
 		initialize: function() {
-			this.services = new	SupervisorServiceList;
+			this.services = new SupervisorServiceList;
 			this.services.server = this;
 			this.services.bind('add', this.addOne, this);
 			this.services.bind('reset', this.addAll, this);
@@ -128,13 +128,11 @@
 			return API_ROOT  + 'service/' +  this.collection.server.get("id") + '/'
 				+ encodeURIComponent(this.collection.server.get("ip")) + '/'
 				+ ((this.get('group') !=  this.get("name")) ? this.get('group') + ":" : "") + this.get("name");
-			//~ return 'http://'+this.collection.server.get("ip") + URL_ROOT + 'service/' +  this.collection.server.get("id") + "/"
-				//~ + ((this.get('group') !=  this.get("name")) ? this.get('group') + ":" : "") + this.get("name");
 		},
 
 		initialize: function() {
 			this.cid = this.collection.server.get("name") + ":" + this.get("name");
-			this.set({running: (this.get("state") == 20) });
+			this.set({running: (this.get("state") == RUNNING_STATE) });
 			// We want to refresh after an action
 			this.bind("sync", this.onUpdateSuccess, this);
 			this.bind("change", this.collection.server.countServices, this.collection.server);
@@ -151,9 +149,17 @@
 		},
 
 		toggleRunning: function() {
+			console.log("running: " +this.get("running"));
 			this.save({running: !this.get("running")});
 		},
+		sendSignal: function(sig) {
+		  console.log("Send Signal: "+sig);
+		  console.log(this.url());
 
+		  var params = {type: 'GET', dataType: 'json'};
+		  var options = {url: this.url() + '/signal/' + sig };
+		  $.ajax(_.extend(params, options))
+		},
 		onUpdateSuccess: function(service, response) {
 			if (response === true) {
 				service.syncSuccess = true;
@@ -167,7 +173,7 @@
 			service.fetch();
 		},
 
-		sync: function(method, model, options) {
+		sync: function(method, model, options) { // console.log("SupervisorServer.sync");
 			var params = _.clone(options);
 			params.contentType = 'application/json';
 			params.data = JSON.stringify({running: model.get('running')});
@@ -198,18 +204,24 @@
 
 		onModelSaved: function(model, response, options) {
 			if (!model.syncSuccess) {
+				console.log(model.syncError);
 				this.$el.find(".alert-message").text(model.syncError);
 				this.$el.find(".alert").toggle();
 			}
 		},
 
-		render: function() {
+		render: function() { // console.log("SupervisorServiceView.render");
+			// console.log(this.model.toJSON());
+			// Make sure this is set properly!
+			this.model.set("running", this.model.get("state") == RUNNING_STATE);
 			this.$el.html(this.template(this.model.toJSON()));
 			return this;
 		},
 
 		events: {
-			"click .running_action" : "toggleRunning"
+			"click .running_action" : "toggleRunning",
+			"click .sigusr1" : "sendUSR1",
+			"click .sighup" : "sendHUP"
 		},
 
 		toggleRunning: function() {
@@ -219,6 +231,14 @@
 			} else {
 				this.$el.find(".status").text("STOPPING");
 			}
+		},
+		sendUSR1: function() {
+		  this.model.sendSignal("USR1");
+		  return false;
+		},
+		sendHUP: function() {
+		  this.model.sendSignal("HUP1");
+		  return false;
 		}
 	});
 
@@ -245,6 +265,11 @@
 	});
 	var updateServers = function() {console.log('updating servers');
 		//~ SupervisorServers.fetch();
+
+		//~ SupervisorServers.each(function(server) {
+		  //~ server.fetch();
+		//~ });
+
 		SupervisorServers.each(function(server) {
 		  server.services.each(function(service) {
 		    service.fetch();
@@ -254,7 +279,7 @@
 	}
 
 	var App = new AppView;
-	//~ setTimeout(updateServers, 5*1000);
+	setTimeout(updateServers, 30*1000);
 	//~ updateServers();
 
 });

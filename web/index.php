@@ -27,6 +27,25 @@ function dispatcher($route) {
     echo json_encode($servers);
     return;
   }
+  if (preg_match('/\/server\/(reload|restart)\/(\d+)\/(.*)$/',$route,$mv)) {
+    list(,$cmd,$id,$addr) = $mv;
+    if (is_null(check_server($addr))) return 'Unknown server '.$addr;
+
+    $api = new \Supervisor\API;
+    if ($cmd == 'reload') {
+      $res = $api->reloadConfig($addr);
+    } elseif ($cmd == 'restart') {
+      $res = $api->restart($addr);
+    } else {
+      return 'Unknown command: "' . $cmd.'"';
+    }
+    header('Location: '.$_SERVER['SCRIPT_NAME']);
+
+    var_dump($res);
+
+    print_r($mv);
+    return;
+  }
   if (preg_match('/\/server\/details\/(\d+)\/(.*)$/',$route,$mv)) {
     list(,$id,$addr) = $mv;
     $n = check_server($addr);
@@ -46,20 +65,32 @@ function dispatcher($route) {
     echo json_encode($details);
     return;
   }
+
   if (preg_match('/\/service\/(\d+)\/([^\/]+)$/',$route,$mv)) {
     list(,$id,$addr) = $mv;
-    $n = check_server($addr);
-    if (is_null($n)) return 'Unknown server '.$addr;
+    if (is_null(check_server($addr))) return 'Unknown server '.$addr;
 
     $api = new \Supervisor\API;
     $services = $api->getAllProcessInfo($addr);
     echo json_encode($services);
     return;
   }
+
+  //~ if (preg_match('/\/service\/(\d+)\/([^\/]+)\/([^\/]+)\/signal\/([^\/]+)$/',$route,$mv)) {
+    //~ list(,$id,$addr,$service,$signal) = $mv;
+    //~ if (is_null(check_server($addr))) return 'Unknown server '.$addr;
+
+    //~ $api = new \Supervisor\API;
+    //~ $res = $api->signalProcess($addr,$service,1);
+
+    //~ print_r([$mv,$res]);
+    //~ return;
+  //~ }
+
+
   if (preg_match('/\/service\/(\d+)\/([^\/]+)\/([^\/]+)$/',$route,$mv)) {
     list(,$id,$addr,$service) = $mv;
-    $n = check_server($addr);
-    if (is_null($n)) return 'Unknown server '.$addr;
+    if (is_null(check_server($addr))) return 'Unknown server '.$addr;
 
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') == 'POST') {
       $req = json_decode(file_get_contents('php://input'), true);
@@ -70,18 +101,24 @@ function dispatcher($route) {
       $api = new \Supervisor\API;
       $cstate = $api->getProcessInfo($addr,$service);
       if (isset($cstate['error'])) {
-	$res = $cstate;
+	echo json_encode($cstate);
+	return;
+      }
+      if (!isset($req['running'])) {
+	echo json_encode(['error'=>['code'=>'','msg'=>'Error missing state in request']]);
+	return;
+      }
+      if ($req['running'] && $cstate['state'] == $api::STATE_RUNNING) {
+	$res = $api->stopProcess($addr,$service);
+      } elseif (!$req['running'] && $cstate['state'] != $api::STATE_RUNNING)  {
+	$res = $api->startProcess($addr,$service);
       } else {
-	if (isset($req['running'])) {
-	  if (!$req['running'] && $cstate['state'] == $api::STATE_RUNNING) {
-	    $res = $api->stopProcess($addr,$service);
-	  } elseif ($req['running'] && $cstate['state'] != $api::STATE_RUNNING)  {
-	    $res = $api->startProcess($addr,$service);
-	  }
-	}
-	if (!$res) {
-	  $res = ['error'=>['code'=>'','msg'=>'Error state for '.$service]];
-	}
+	$res = ['error'=>['code'=>'',
+	  'msg'=>'Invalid state requested'
+	]];
+      }
+      if (!$res) {
+	$res = $res = ['error'=>['code'=>'','msg'=>'Error state for '.$service]];
       }
       echo json_encode($res);
       return;
