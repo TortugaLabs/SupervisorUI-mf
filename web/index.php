@@ -1,6 +1,7 @@
 <?php
 require_once(__DIR__.'/../src/Supervisor/IXR_Library.php');
 require_once(__DIR__.'/../src/Supervisor/API.php');
+define('VERSION',trim(file_get_contents(__DIR__.'/../VERSION')));
 
 $api_root = $_SERVER['SCRIPT_NAME'].'/';
 $url_root = dirname($_SERVER['SCRIPT_NAME']);
